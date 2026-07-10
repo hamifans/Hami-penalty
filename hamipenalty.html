@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HAMI Penalty Shoot</title>
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; font-family: 'Arial', sans-serif; }
+        body { background-color: #111; color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+        #game-container { width: 100%; max-width: 450px; height: 100vh; max-height: 850px; position: relative; background-color: #222; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
+        
+        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; z-index: 10; background: linear-gradient(135deg, #0b2a4a 0%, #1a4a7a 100%); transition: opacity 0.3s ease; }
+        .screen.hidden { opacity: 0; pointer-events: none; z-index: 0; }
+        
+        .main-title {
+            font-size: 2.5rem;
+            font-weight: 900;
+            text-shadow: 3px 3px 0 #f1c40f, 6px 6px 0 rgba(0,0,0,0.5);
+            color: #fff;
+            text-align: center;
+            line-height: 1.2;
+            margin-bottom: 6px;
+            letter-spacing: 2px;
+        }
+        .main-title span { color: #f1c40f; }
+        .sub-brand {
+            font-size: 0.9rem;
+            color: #aaa;
+            margin-bottom: 20px;
+            text-align: center;
+            letter-spacing: 3px;
+            font-weight: 300;
+        }
+        .web-footer {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: rgba(255,255,255,0.4);
+            font-size: 0.7rem;
+            letter-spacing: 2px;
+            pointer-events: none;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+        }
+        .web-footer a {
+            color: rgba(255,255,255,0.5);
+            text-decoration: none;
+            pointer-events: auto;
+            transition: color 0.2s;
+        }
+        .web-footer a:active { color: #f1c40f; }
+
+        label { font-weight: bold; margin-top: 8px; margin-bottom: 4px; align-self: flex-start; width: 100%; font-size: 0.85rem; color: #ddd; }
+        select, button { width: 100%; padding: 12px 14px; margin-bottom: 12px; border-radius: 10px; border: none; font-size: 1rem; font-weight: bold; background: white; color: #333; }
+        button { background: #2ecc71; color: white; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: transform 0.1s; }
+        button:active { transform: scale(0.97); }
+        button.primary { background: #f1c40f; color: #111; }
+        button.danger { background: #e74c3c; }
+        
+        .difficulty-group { display: flex; gap: 8px; width: 100%; margin-bottom: 12px; }
+        .difficulty-group .diff-btn { flex: 1; padding: 10px 0; border-radius: 10px; border: 2px solid #555; background: transparent; color: #aaa; font-weight: bold; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; text-align: center; }
+        .difficulty-group .diff-btn:active { transform: scale(0.95); }
+        .difficulty-group .diff-btn.active { border-color: #f1c40f; background: rgba(241,196,15,0.2); color: #f1c40f; box-shadow: 0 0 12px rgba(241,196,15,0.2); }
+        .difficulty-group .diff-btn .diff-label { display: block; font-size: 0.6rem; opacity: 0.7; font-weight: normal; }
+        .difficulty-group .diff-btn .diff-icon { font-size: 1.2rem; display: block; margin-bottom: 2px; }
+        
+        #game-screen { 
+            background-image: url('https://i.ibb.co/TDvWPKGR/image-1783610414231.jpg'); 
+            background-size: cover; 
+            background-position: center; 
+            padding: 0; 
+            position: relative;
+        }
+        
+        #branding {
+            position: absolute;
+            top: 8px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            z-index: 18;
+            pointer-events: none;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.9);
+            font-weight: 900;
+            letter-spacing: 1px;
+            line-height: 1.3;
+        }
+        #branding .fifa { font-size: 1.1rem; color: #f1c40f; }
+        #branding .united { font-size: 0.7rem; color: #ccc; }
+        
+        .music-icon {
+            display: inline-block;
+            font-size: 0.7rem;
+            margin-left: 4px;
+            color: #2ecc71;
+            transition: transform 0.3s;
+        }
+        .music-icon.spin {
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #hud {
+            position: absolute;
+            top: 50px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 14px;
+            z-index: 20;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            pointer-events: none;
+        }
+        .hud-panel {
+            background: rgba(0,0,0,0.65);
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.15);
+            font-size: 0.8rem;
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .hud-panel .flag-icon { font-size: 1.1rem; }
+        .hud-panel .score-num { color: #f1c40f; font-weight: 900; }
+        
+        #goal-container {
+            position: absolute;
+            bottom: 8%;
+            left: 5%;
+            width: 90%;
+            height: 28%;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 15;
+        }
+        .shot-row { display: flex; gap: 6px; flex: 1; }
+        .text-block {
+            flex: 1;
+            background: rgba(0,0,0,0.75);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+        }
+        .text-block:active { background: #f1c40f; color: #111; border-color: #f1c40f; transform: scale(0.94); }
+        .text-block .arrow { font-size: 1.2rem; margin-right: 4px; }
+        
+        #goalkeeper {
+            position: absolute;
+            top: 44%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 280px;
+            height: 280px;
+            background-image: url('https://i.ibb.co/bgx9G0QM/20260710-003516.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: bottom center;
+            transition: all 0.3s ease-out;
+            z-index: 14;
+            pointer-events: none;
+        }
+        
+        #ball {
+            position: absolute;
+            bottom: 12%;
+            left: 50%;
+            transform: translateX(-50%) scale(1);
+            width: 50px;
+            height: 50px;
+            font-size: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            filter: drop-shadow(0px 8px 6px rgba(0,0,0,0.5));
+            transition: all 0.4s cubic-bezier(0.25,0.46,0.45,0.94);
+            z-index: 16;
+            opacity: 1;
+            pointer-events: none;
+        }
+        
+        #feedback {
+            position: absolute;
+            top: 12%;
+            left: 50%;
+            transform: translateX(-50%) scale(0);
+            font-size: 2.8rem;
+            font-weight: 900;
+            text-shadow: 3px 3px 0px rgba(0,0,0,0.8), 0 0 30px rgba(0,0,0,0.5);
+            z-index: 30;
+            transition: transform 0.3s cubic-bezier(0.175,0.885,0.32,1.275);
+            pointer-events: none;
+            text-align: center;
+        }
+        #feedback.show { transform: translateX(-50%) scale(1); }
+        
+        .audio-toggle {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background: rgba(0,0,0,0.55);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            z-index: 40;
+            cursor: pointer;
+            font-size: 1.2rem;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        .audio-toggle:active { background: rgba(255,255,255,0.2); }
+        .audio-toggle.muted { background: rgba(200,50,50,0.5); border-color: #e74c3c; }
+        
+        #game-over-screen { background: linear-gradient(135deg, #0a1628 0%, #1a2a4a 100%); }
+        #game-over-title { font-size: 2.2rem; margin-bottom: 6px; }
+        #final-score { font-size: 2.8rem; margin-bottom: 20px; color: #f1c40f; text-shadow: 0 0 20px rgba(241,196,15,0.3); }
+        #final-score .flag-icon { font-size: 2.2rem; }
+        .result-detail { font-size: 1rem; color: #aaa; margin-bottom: 20px; text-align: center; line-height: 1.6; }
+        
+        @media (max-width: 420px) {
+            .main-title { font-size: 1.8rem; }
+            #goalkeeper { width: 210px; height: 210px; top: 46%; }
+            #ball { font-size: 38px; width: 38px; height: 38px; }
+            #feedback { font-size: 2.2rem; top: 10%; }
+            .hud-panel { font-size: 0.7rem; padding: 4px 10px; }
+            .hud-panel .flag-icon { font-size: 1rem; }
+            .text-block { font-size: 0.7rem; }
+            #goal-container { bottom: 6%; height: 26%; }
+            #branding .fifa { font-size: 0.9rem; }
+            #branding .united { font-size: 0.6rem; }
+            #hud { top: 42px; }
+            .web-footer { font-size: 0.6rem; bottom: 12px; }
+        }
+        @media (max-height: 700px) {
+            .main-title { font-size: 1.6rem; }
+            #goalkeeper { width: 180px; height: 180px; top: 48%; }
+            #ball { font-size: 34px; width: 34px; height: 34px; bottom: 10%; }
+            #goal-container { bottom: 4%; height: 24%; }
+            .text-block { font-size: 0.6rem; }
+            #feedback { font-size: 1.8rem; top: 8%; }
+            #branding .fifa { font-size: 0.8rem; }
+            #branding .united { font-size: 0.5rem; }
+            #hud { top: 36px; }
+            .web-footer { font-size: 0.5rem; bottom: 8px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <!-- Background Music – playlist otomatis berganti -->
+    <audio id="bgm-music" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" crossorigin="anonymous"></audio>
+    <button class="audio-toggle" id="mute-btn" onclick="toggleMute()">🔊</button>
+
+    <!-- MENU SCREEN -->
+    <div id="menu-screen" class="screen">
+        <div class="main-title">HAMI<br><span>PENALTY</span><br>SHOOT</div>
+        <div class="sub-brand">⚽ WORLD CUP CHAMPION 2026</div>
+
+        <label>🇺🇳 YOUR TEAM</label>
+        <select id="player-team"></select>
+        <label>🇺🇳 OPPONENT</label>
+        <select id="opponent-team"></select>
+        <label>🎯 DIFFICULTY LEVEL</label>
+        <div class="difficulty-group" id="difficulty-group">
+            <div class="diff-btn" data-value="easy"><span class="diff-icon">🟢</span> EASY<span class="diff-label">GK often wrong</span></div>
+            <div class="diff-btn active" data-value="medium"><span class="diff-icon">🟡</span> MEDIUM<span class="diff-label">GK random</span></div>
+            <div class="diff-btn" data-value="hard"><span class="diff-icon">🔴</span> HARD<span class="diff-label">GK smart</span></div>
+        </div>
+        <button class="primary" onclick="startGame()" style="margin-top:6px;">🚀 KICK OFF</button>
+
+        <div class="web-footer">🌐 <a href="#" onclick="event.preventDefault()">www.hamicoin.com</a></div>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div id="game-screen" class="screen hidden">
+        <div id="branding">
+            <div class="fifa">⚽ FIFA WORLD CUP 26 <span class="music-icon" id="musicIndicator">🎵</span></div>
+            <div class="united">UNITED 2026</div>
+        </div>
+
+        <div id="hud">
+            <div class="hud-panel" id="team-display">
+                <span class="flag-icon" id="hud-player-flag">🇮🇩</span>
+                <span id="hud-player-code">IND</span>
+                <span class="score-num" id="hud-score">0</span>
+                <span style="color:#888;">-</span>
+                <span class="score-num" id="hud-opp-score">0</span>
+                <span id="hud-opp-code">BRA</span>
+                <span class="flag-icon" id="hud-opp-flag">🇧🇷</span>
+            </div>
+            <div class="hud-panel" id="shot-display">Shot: 1/10</div>
+        </div>
+
+        <div id="goal-container">
+            <div class="shot-row">
+                <div class="text-block" data-dir="left" data-height="high"><span class="arrow">⬆</span> LEFT</div>
+                <div class="text-block" data-dir="center" data-height="high"><span class="arrow">⬆</span> CTR</div>
+                <div class="text-block" data-dir="right" data-height="high"><span class="arrow">⬆</span> RIGHT</div>
+            </div>
+            <div class="shot-row">
+                <div class="text-block" data-dir="left" data-height="low"><span class="arrow">⬇</span> LEFT</div>
+                <div class="text-block" data-dir="center" data-height="low"><span class="arrow">⬇</span> CTR</div>
+                <div class="text-block" data-dir="right" data-height="low"><span class="arrow">⬇</span> RIGHT</div>
+            </div>
+        </div>
+
+        <div id="goalkeeper"></div>
+        <div id="ball">⚽</div>
+        <div id="feedback">GOAL!</div>
+    </div>
+
+    <!-- GAME OVER SCREEN -->
+    <div id="game-over-screen" class="screen hidden">
+        <h1 id="game-over-title">MATCH ENDED</h1>
+        <div id="final-score">
+            <span class="flag-icon" id="final-player-flag">🇮🇩</span>
+            <span id="final-player-name">IND</span>
+            <span style="color:#f1c40f;font-weight:900;" id="final-score-player">0</span>
+            <span style="color:#888;margin:0 6px;">-</span>
+            <span style="color:#f1c40f;font-weight:900;" id="final-score-opp">0</span>
+            <span id="final-opp-name">BRA</span>
+            <span class="flag-icon" id="final-opp-flag">🇧🇷</span>
+        </div>
+        <div class="result-detail" id="result-detail">10 shots · 0 goals</div>
+        <button class="danger" onclick="backToMenu()">🔄 PLAY AGAIN</button>
+        <div class="web-footer" style="position:relative; margin-top:20px; color:rgba(255,255,255,0.3);">🌐 www.hamicoin.com</div>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    // DATA & FLAGS
+    // ============================================================
+    const countries = [
+        "Argentina","Brazil","England","France","Germany","Indonesia","Italy","Japan",
+        "Morocco","Netherlands","Portugal","Saudi Arabia","Senegal","South Korea",
+        "Spain","Uruguay","USA","Croatia","Belgium","Mexico"
+    ];
+    const flagMap = {
+        "Argentina":"🇦🇷","Brazil":"🇧🇷","England":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","France":"🇫🇷","Germany":"🇩🇪",
+        "Indonesia":"🇮🇩","Italy":"🇮🇹","Japan":"🇯🇵","Morocco":"🇲🇦","Netherlands":"🇳🇱",
+        "Portugal":"🇵🇹","Saudi Arabia":"🇸🇦","Senegal":"🇸🇳","South Korea":"🇰🇷",
+        "Spain":"🇪🇸","Uruguay":"🇺🇾","USA":"🇺🇸","Croatia":"🇭🇷","Belgium":"🇧🇪","Mexico":"🇲🇽"
+    };
+    const codeMap = {
+        "Argentina":"ARG","Brazil":"BRA","England":"ENG","France":"FRA","Germany":"GER",
+        "Indonesia":"IND","Italy":"ITA","Japan":"JPN","Morocco":"MAR","Netherlands":"NED",
+        "Portugal":"POR","Saudi Arabia":"KSA","Senegal":"SEN","South Korea":"KOR",
+        "Spain":"ESP","Uruguay":"URU","USA":"USA","Croatia":"CRO","Belgium":"BEL","Mexico":"MEX"
+    };
+    const GK_IMAGES = {
+        ready: 'https://i.ibb.co/bgx9G0QM/20260710-003516.png',
+        save_left: 'https://i.ibb.co/Xf730Gpf/20260710-003149.png',
+        save_right: 'https://i.ibb.co/Q7j6DXY8/20260710-003202.png',
+        save_center: 'https://i.ibb.co/LzP1kD6c/20260710-003452.png',
+        fail_left: 'https://i.ibb.co/cqKHQtm/20260710-003239.png',
+        fail_right: 'https://i.ibb.co/sd7HXqQX/20260710-003317.png'
+    };
+
+    // ============================================================
+    // STATE
+    // ============================================================
+    let playerTeam = "Indonesia", opponentTeam = "Brazil", difficulty = "medium";
+    let score = 0, oppScore = 0, currentShot = 1, isKicking = false, gameOver = false;
+    let isMuted = false, audioCtx = null;
+    const MAX_SHOTS = 10;
+
+    const pSelect = document.getElementById('player-team');
+    const oSelect = document.getElementById('opponent-team');
+    const diffBtns = document.querySelectorAll('.diff-btn');
+    const musicIndicator = document.getElementById('musicIndicator');
+
+    // ============================================================
+    // PLAYLIST – Musik bebas copyright (SoundHelix)
+    // ============================================================
+    const playlist = [
+        'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+        'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+        'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3'
+    ];
+    let currentTrackIndex = 0;
+    const bgm = document.getElementById('bgm-music');
+
+    // ============================================================
+    // INIT DROPDOWNS
+    // ============================================================
+    function populateDropdowns() {
+        pSelect.innerHTML = ''; oSelect.innerHTML = '';
+        countries.forEach((c) => {
+            const flag = flagMap[c] || '🏳️';
+            const label = `${flag} ${c}`;
+            const opt1 = new Option(label, c);
+            const opt2 = new Option(label, c);
+            if (c === "Indonesia") opt1.selected = true;
+            if (c === "Brazil") opt2.selected = true;
+            pSelect.add(opt1);
+            oSelect.add(opt2);
+        });
+        playerTeam = pSelect.value;
+        opponentTeam = oSelect.value;
+    }
+    populateDropdowns();
+
+    pSelect.addEventListener('change', function() {
+        if (this.value === oSelect.value) {
+            const other = countries.find(c => c !== this.value);
+            if (other) oSelect.value = other;
+            else { const idx = countries.indexOf(this.value); oSelect.value = countries[(idx+1)%countries.length]; }
+        }
+        playerTeam = pSelect.value;
+        opponentTeam = oSelect.value;
+    });
+    oSelect.addEventListener('change', function() {
+        if (this.value === pSelect.value) {
+            const other = countries.find(c => c !== this.value);
+            if (other) pSelect.value = other;
+            else { const idx = countries.indexOf(this.value); pSelect.value = countries[(idx+1)%countries.length]; }
+        }
+        playerTeam = pSelect.value;
+        opponentTeam = oSelect.value;
+    });
+
+    diffBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            diffBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            difficulty = this.dataset.value;
+        });
+    });
+
+    // ============================================================
+    // AUDIO ENGINE – FULL SOUND EFFECTS + PLAYLIST BGM
+    // ============================================================
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume().catch(e => console.log('AudioContext resume error:', e));
+        }
+    }
+
+    document.addEventListener('click', function initOnClick() {
+        initAudio();
+        document.removeEventListener('click', initOnClick);
+    }, { once: true });
+
+    // --- BGM Playlist ---
+    function playNextTrack() {
+        if (isMuted || document.getElementById('menu-screen').classList.contains('hidden') === false) {
+            // Don't auto-play if muted or on menu
+            return;
+        }
+        // Pilih lagu berikutnya secara siklik
+        currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
+        bgm.src = playlist[currentTrackIndex];
+        bgm.volume = 0.25;
+        bgm.loop = false; // kita handle next via ended event
+        bgm.play().catch(e => console.log('BGM play error:', e));
+        musicIndicator.classList.add('spin');
+    }
+
+    // Saat lagu selesai, pindah ke lagu berikutnya
+    bgm.addEventListener('ended', function() {
+        if (!isMuted && !document.getElementById('menu-screen').classList.contains('hidden') === false) {
+            playNextTrack();
+        }
+    });
+
+    function startBGM() {
+        if (isMuted) return;
+        // Mulai dari track random
+        currentTrackIndex = Math.floor(Math.random() * playlist.length);
+        bgm.src = playlist[currentTrackIndex];
+        bgm.volume = 0.25;
+        bgm.loop = false;
+        bgm.play().then(() => {
+            musicIndicator.classList.add('spin');
+        }).catch(e => console.log('BGM play error:', e));
+    }
+
+    function stopBGM() {
+        bgm.pause();
+        bgm.currentTime = 0;
+        musicIndicator.classList.remove('spin');
+    }
+
+    // --- Efek Suara Stadion ---
+    function playCrowd(type) {
+        if (isMuted || !audioCtx) return;
+        try {
+            const now = audioCtx.currentTime;
+            const bufferSize = audioCtx.sampleRate * 0.5;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.4));
+            }
+            const source = audioCtx.createBufferSource();
+            source.buffer = buffer;
+            const gain = audioCtx.createGain();
+            if (type === 'goal') {
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+            } else if (type === 'win') {
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 1.2);
+            } else {
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            }
+            source.connect(gain);
+            gain.connect(audioCtx.destination);
+            source.start(now);
+            source.stop(now + 1.5);
+        } catch(e) { /* ignore */ }
+    }
+
+    function playFanfare() {
+        if (isMuted || !audioCtx) return;
+        try {
+            const now = audioCtx.currentTime;
+            const notes = [523, 587, 659, 784, 880, 988, 1175];
+            notes.forEach((freq, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(freq, now + i * 0.1);
+                gain.gain.setValueAtTime(0.12, now + i * 0.1);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.15);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now + i * 0.1);
+                osc.stop(now + i * 0.1 + 0.15);
+            });
+        } catch(e) { /* ignore */ }
+    }
+
+    function playClap() {
+        if (isMuted || !audioCtx) return;
+        try {
+            const now = audioCtx.currentTime;
+            for (let i = 0; i < 3; i++) {
+                const bufferSize = audioCtx.sampleRate * 0.08;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let j = 0; j < bufferSize; j++) data[j] = (Math.random() * 2 - 1) * Math.exp(-j / (bufferSize * 0.3));
+                const source = audioCtx.createBufferSource();
+                source.buffer = buffer;
+                const gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(0.3, now + i * 0.12);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.1);
+                source.connect(gain);
+                gain.connect(audioCtx.destination);
+                source.start(now + i * 0.12);
+                source.stop(now + i * 0.12 + 0.1);
+            }
+        } catch(e) { /* ignore */ }
+    }
+
+    function playLaugh() {
+        if (isMuted || !audioCtx) return;
+        try {
+            const now = audioCtx.currentTime;
+            const freqs = [400, 600, 450, 650];
+            freqs.forEach((f, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(f, now + i * 0.15);
+                gain.gain.setValueAtTime(0.15, now + i * 0.15);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 0.12);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now + i * 0.15);
+                osc.stop(now + i * 0.15 + 0.12);
+            });
+        } catch(e) { /* ignore */ }
+    }
+
+    function playSound(type) {
+        if (isMuted || !audioCtx) return;
+        try {
+            const now = audioCtx.currentTime;
+            if (type === 'kick') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.frequency.setValueAtTime(160, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now+0.15);
+                gain.gain.setValueAtTime(0.5, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now+0.15);
+                osc.start(now); osc.stop(now+0.15);
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.type = 'sawtooth';
+                osc2.frequency.setValueAtTime(300, now);
+                osc2.frequency.exponentialRampToValueAtTime(100, now+0.1);
+                gain2.gain.setValueAtTime(0.1, now);
+                gain2.gain.exponentialRampToValueAtTime(0.001, now+0.1);
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
+                osc2.start(now);
+                osc2.stop(now+0.1);
+            } else if (type === 'goal') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.frequency.setValueAtTime(320, now);
+                osc.frequency.exponentialRampToValueAtTime(500, now+0.2);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now+0.4);
+                osc.start(now); osc.stop(now+0.4);
+                playCrowd('goal');
+            } else if (type === 'save') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.exponentialRampToValueAtTime(100, now+0.25);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now+0.25);
+                osc.start(now); osc.stop(now+0.25);
+                playClap();
+                playLaugh();
+            } else if (type === 'win') {
+                playFanfare();
+                playCrowd('win');
+            }
+        } catch(e) { /* ignore */ }
+    }
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        const btn = document.getElementById('mute-btn');
+        if (isMuted) {
+            stopBGM();
+            btn.classList.add('muted');
+            btn.innerText = '🔇';
+            musicIndicator.classList.remove('spin');
+        } else {
+            if (!document.getElementById('menu-screen').classList.contains('hidden')) {
+                // di menu, tidak auto-play
+            } else {
+                startBGM();
+            }
+            btn.classList.remove('muted');
+            btn.innerText = '🔊';
+        }
+    }
+
+    // ============================================================
+    // GAME FUNCTIONS
+    // ============================================================
+    function startGame() {
+        initAudio();
+        playerTeam = pSelect.value;
+        opponentTeam = oSelect.value;
+        const active = document.querySelector('.diff-btn.active');
+        if (active) difficulty = active.dataset.value;
+        score = 0; oppScore = 0; currentShot = 1; isKicking = false; gameOver = false;
+        updateHUD();
+        resetPositions();
+        // Mulai BGM
+        startBGM();
+        document.getElementById('menu-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        document.getElementById('game-over-screen').classList.add('hidden');
+        const btn = document.getElementById('mute-btn');
+        if (isMuted) { btn.innerText = '🔇'; btn.classList.add('muted'); }
+        else { btn.innerText = '🔊'; btn.classList.remove('muted'); }
+    }
+
+    function updateHUD() {
+        const pFlag = flagMap[playerTeam] || '🏳️', oFlag = flagMap[opponentTeam] || '🏳️';
+        const pCode = codeMap[playerTeam] || playerTeam.substring(0,3).toUpperCase();
+        const oCode = codeMap[opponentTeam] || opponentTeam.substring(0,3).toUpperCase();
+        document.getElementById('hud-player-flag').textContent = pFlag;
+        document.getElementById('hud-player-code').textContent = pCode;
+        document.getElementById('hud-score').textContent = score;
+        document.getElementById('hud-opp-score').textContent = oppScore;
+        document.getElementById('hud-opp-code').textContent = oCode;
+        document.getElementById('hud-opp-flag').textContent = oFlag;
+        document.getElementById('shot-display').textContent = `Shot: ${currentShot}/${MAX_SHOTS}`;
+    }
+
+    function resetPositions() {
+        const gk = document.getElementById('goalkeeper');
+        const ball = document.getElementById('ball');
+        gk.style.backgroundImage = `url('${GK_IMAGES.ready}')`;
+        gk.style.left = '50%';
+        gk.style.top = '44%';
+        gk.style.transform = 'translateX(-50%)';
+        ball.style.transition = 'all 0.4s cubic-bezier(0.25,0.46,0.45,0.94)';
+        ball.style.zIndex = '16';
+        ball.style.bottom = '12%';
+        ball.style.left = '50%';
+        ball.style.transform = 'translateX(-50%) scale(1)';
+        ball.style.opacity = '1';
+        document.getElementById('feedback').classList.remove('show');
+    }
+
+    document.querySelectorAll('.text-block').forEach(el => {
+        el.addEventListener('click', function(e) {
+            const dir = this.dataset.dir;
+            const height = this.dataset.height;
+            shoot(dir, height);
+        });
+    });
+
+    function shoot(playerDirection, shotHeight) {
+        if (isKicking || gameOver) return;
+        isKicking = true;
+        playSound('kick');
+
+        const ball = document.getElementById('ball');
+        const gk = document.getElementById('goalkeeper');
+        const feedback = document.getElementById('feedback');
+
+        const directions = ['left','center','right'];
+        const heights = ['high','low'];
+        let gkDirection = directions[Math.floor(Math.random()*3)];
+        let gkHeight = heights[Math.floor(Math.random()*2)];
+
+        if (difficulty === 'easy') {
+            if (Math.random() < 0.75) {
+                const wrong = directions.filter(d => d !== playerDirection);
+                gkDirection = wrong[Math.floor(Math.random()*wrong.length)];
+                gkHeight = heights[Math.floor(Math.random()*2)];
+            }
+        } else if (difficulty === 'hard') {
+            if (Math.random() < 0.70) {
+                gkDirection = playerDirection;
+                gkHeight = shotHeight;
+            }
+        }
+
+        const isGoal = (playerDirection !== gkDirection) || (shotHeight !== gkHeight);
+
+        let ballLeft = '50%', ballBottom = '12%';
+        if (playerDirection === 'left') { ballLeft = '22%'; ballBottom = (shotHeight==='low')?'44%':'58%'; }
+        else if (playerDirection === 'center') { ballLeft = '50%'; ballBottom = (shotHeight==='low')?'46%':'62%'; }
+        else { ballLeft = '78%'; ballBottom = (shotHeight==='low')?'44%':'58%'; }
+        ball.style.left = ballLeft;
+        ball.style.bottom = ballBottom;
+        ball.style.transform = 'translateX(-50%) scale(0.35)';
+
+        setTimeout(() => {
+            let gkImg = GK_IMAGES.ready, gkLeft = '50%', gkTop = '44%';
+            if (gkDirection === 'left') {
+                if (isGoal) { gkImg = GK_IMAGES.fail_left; gkLeft = '34%'; gkTop = (shotHeight==='low')?'47%':'44%'; }
+                else { gkImg = GK_IMAGES.save_left; gkLeft = '28%'; gkTop = (shotHeight==='low')?'47%':'44%'; }
+            } else if (gkDirection === 'right') {
+                if (isGoal) { gkImg = GK_IMAGES.fail_right; gkLeft = '66%'; gkTop = (shotHeight==='low')?'47%':'44%'; }
+                else { gkImg = GK_IMAGES.save_right; gkLeft = '72%'; gkTop = (shotHeight==='low')?'47%':'44%'; }
+            } else {
+                if (isGoal) { gkImg = GK_IMAGES.fail_left; gkLeft = '42%'; gkTop = (shotHeight==='low')?'47%':'44%'; }
+                else { gkImg = GK_IMAGES.save_center; gkLeft = '50%'; gkTop = (shotHeight==='low')?'47%':'44%'; }
+            }
+            gk.style.backgroundImage = `url('${gkImg}')`;
+            gk.style.left = gkLeft;
+            gk.style.top = gkTop;
+            gk.style.transform = 'translateX(-50%)';
+        }, 150);
+
+        setTimeout(() => {
+            if (isGoal) {
+                ball.style.zIndex = '13';
+                feedback.innerText = '⚽ GOAL!';
+                feedback.style.color = '#2ecc71';
+                playSound('goal');
+                score++;
+                setTimeout(() => {
+                    const bBottom = (shotHeight==='low')?'41%':(playerDirection==='center'?'56%':'52%');
+                    ball.style.bottom = bBottom;
+                }, 150);
+            } else {
+                feedback.innerText = '🧤 SAVED!';
+                feedback.style.color = '#e74c3c';
+                playSound('save');
+                ball.style.opacity = '0';
+            }
+            feedback.classList.add('show');
+            updateHUD();
+
+            setTimeout(() => {
+                if (currentShot >= MAX_SHOTS) endGame();
+                else { currentShot++; updateHUD(); resetPositions(); isKicking = false; }
+            }, 1800);
+        }, 400);
+    }
+
+    function endGame() {
+        gameOver = true;
+        document.getElementById('game-screen').classList.add('hidden');
+        document.getElementById('game-over-screen').classList.remove('hidden');
+
+        const pFlag = flagMap[playerTeam] || '🏳️', oFlag = flagMap[opponentTeam] || '🏳️';
+        const pCode = codeMap[playerTeam] || playerTeam.substring(0,3).toUpperCase();
+        const oCode = codeMap[opponentTeam] || opponentTeam.substring(0,3).toUpperCase();
+        document.getElementById('final-player-flag').textContent = pFlag;
+        document.getElementById('final-player-name').textContent = pCode;
+        document.getElementById('final-score-player').textContent = score;
+        document.getElementById('final-score-opp').textContent = oppScore;
+        document.getElementById('final-opp-name').textContent = oCode;
+        document.getElementById('final-opp-flag').textContent = oFlag;
+
+        const title = document.getElementById('game-over-title');
+        const resultDetail = document.getElementById('result-detail');
+        const playerGoals = score;
+        if (playerGoals >= 6) {
+            title.innerText = '🏆 YOU WIN!';
+            title.style.color = '#f1c40f';
+            resultDetail.textContent = `🎉 ${playerGoals} goals from ${MAX_SHOTS} shots!`;
+            playSound('win');
+        } else if (playerGoals === 0) {
+            title.innerText = '😵 TOTAL FAIL!';
+            title.style.color = '#e74c3c';
+            resultDetail.textContent = `😢 0 goals. Try again!`;
+        } else {
+            title.innerText = '😤 UNLUCKY!';
+            title.style.color = '#e67e22';
+            resultDetail.textContent = `💪 ${playerGoals} goals from ${MAX_SHOTS}. Try harder!`;
+        }
+    }
+
+    function backToMenu() {
+        document.getElementById('game-over-screen').classList.add('hidden');
+        document.getElementById('menu-screen').classList.remove('hidden');
+        stopBGM();
+        const btn = document.getElementById('mute-btn');
+        if (isMuted) { btn.innerText = '🔇'; btn.classList.add('muted'); }
+        else { btn.innerText = '🔊'; btn.classList.remove('muted'); }
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (document.getElementById('game-screen').classList.contains('hidden')) return;
+        const map = {
+            '1': ['left','high'], '2': ['left','low'],
+            '3': ['center','high'], '4': ['center','low'],
+            '5': ['right','high'], '6': ['right','low']
+        };
+        if (e.key in map) { e.preventDefault(); shoot(map[e.key][0], map[e.key][1]); }
+    });
+
+    document.addEventListener('touchmove', (e) => {
+        if (!document.getElementById('menu-screen').classList.contains('hidden')) return;
+        e.preventDefault();
+    }, { passive: false });
+</script>
+</body>
+</html>
